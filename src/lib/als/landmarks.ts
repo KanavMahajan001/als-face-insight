@@ -98,7 +98,7 @@ export function buildSequence(frames: Landmarks68[], T = 20): Landmarks68[] {
   const out: Landmarks68[] = [];
   for (let i = 0; i < T; i++) {
     const src = Math.min(frames.length - 1, Math.round((i / (T - 1)) * (frames.length - 1)));
-    out.push(normalizeBoundingBox(frames[src]));
+    out.push(normalizeBoundingBox(frames[src]!));
   }
   return out;
 }
