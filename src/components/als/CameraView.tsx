@@ -8,9 +8,9 @@ type Props = {
   showLandmarks?: boolean;
   trajectory?: boolean;
   paused?: boolean;
-  onFrame?: (l: Landmarks68) => void;
-  onStatus?: (s: { detected: boolean; engine: LandmarkEngine; landmarks: Landmarks68 | null }) => void;
-  overlayLabel?: string;
+  onFrame?: ((l: Landmarks68) => void) | undefined;
+  onStatus?: ((s: { detected: boolean; engine: LandmarkEngine; landmarks: Landmarks68 | null }) => void) | undefined;
+  overlayLabel?: string | undefined;
 };
 
 /** Live webcam preview with an aligned facial-landmark overlay. */
