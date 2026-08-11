@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ArchitectureRouteImport } from './routes/architecture'
 import { Route as AssessmentRouteImport } from './routes/assessment'
 import { Route as ProcessingRouteImport } from './routes/processing'
 import { Route as ResultsRouteImport } from './routes/results'
@@ -19,6 +20,11 @@ import { Route as TasksRouteImport } from './routes/tasks'
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ArchitectureRoute = ArchitectureRouteImport.update({
+  id: '/architecture',
+  path: '/architecture',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AssessmentRoute = AssessmentRouteImport.update({
@@ -49,6 +55,7 @@ const TasksRoute = TasksRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/architecture': typeof ArchitectureRoute
   '/assessment': typeof AssessmentRoute
   '/processing': typeof ProcessingRoute
   '/results': typeof ResultsRoute
@@ -57,6 +64,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/architecture': typeof ArchitectureRoute
   '/assessment': typeof AssessmentRoute
   '/processing': typeof ProcessingRoute
   '/results': typeof ResultsRoute
@@ -66,6 +74,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/architecture': typeof ArchitectureRoute
   '/assessment': typeof AssessmentRoute
   '/processing': typeof ProcessingRoute
   '/results': typeof ResultsRoute
@@ -75,12 +84,26 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/assessment' | '/processing' | '/results' | '/setup' | '/tasks'
+    | '/'
+    | '/architecture'
+    | '/assessment'
+    | '/processing'
+    | '/results'
+    | '/setup'
+    | '/tasks'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/assessment' | '/processing' | '/results' | '/setup' | '/tasks'
+  to:
+    | '/'
+    | '/architecture'
+    | '/assessment'
+    | '/processing'
+    | '/results'
+    | '/setup'
+    | '/tasks'
   id:
     | '__root__'
     | '/'
+    | '/architecture'
     | '/assessment'
     | '/processing'
     | '/results'
@@ -90,6 +113,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ArchitectureRoute: typeof ArchitectureRoute
   AssessmentRoute: typeof AssessmentRoute
   ProcessingRoute: typeof ProcessingRoute
   ResultsRoute: typeof ResultsRoute
@@ -104,6 +128,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/architecture': {
+      id: '/architecture'
+      path: '/architecture'
+      fullPath: '/architecture'
+      preLoaderRoute: typeof ArchitectureRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/assessment': {
@@ -146,6 +177,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ArchitectureRoute: ArchitectureRoute,
   AssessmentRoute: AssessmentRoute,
   ProcessingRoute: ProcessingRoute,
   ResultsRoute: ResultsRoute,
