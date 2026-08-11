@@ -81,7 +81,7 @@ export function LandmarkCanvas({
       history.current.forEach((frame, i) => {
         const alpha = (i / history.current.length) * 0.35;
         ctx.fillStyle = `rgba(37,99,235,${alpha})`;
-        for (const idx of [...REGIONS.lipsOuter!.idx, ...REGIONS.jaw!.idx]) {
+        for (const idx of [...REGIONS["lipsOuter"]!.idx, ...REGIONS["jaw"]!.idx]) {
           const p = P(frame[idx]!);
           ctx.beginPath();
           ctx.arc(p.x, p.y, 1.4, 0, Math.PI * 2);
