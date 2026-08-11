@@ -10,33 +10,115 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ArchitectureRouteImport } from './routes/architecture'
+import { Route as AssessmentRouteImport } from './routes/assessment'
+import { Route as ProcessingRouteImport } from './routes/processing'
+import { Route as ResultsRouteImport } from './routes/results'
+import { Route as SetupRouteImport } from './routes/setup'
+import { Route as TasksRouteImport } from './routes/tasks'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ArchitectureRoute = ArchitectureRouteImport.update({
+  id: '/architecture',
+  path: '/architecture',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AssessmentRoute = AssessmentRouteImport.update({
+  id: '/assessment',
+  path: '/assessment',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProcessingRoute = ProcessingRouteImport.update({
+  id: '/processing',
+  path: '/processing',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResultsRoute = ResultsRouteImport.update({
+  id: '/results',
+  path: '/results',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SetupRoute = SetupRouteImport.update({
+  id: '/setup',
+  path: '/setup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TasksRoute = TasksRouteImport.update({
+  id: '/tasks',
+  path: '/tasks',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/architecture': typeof ArchitectureRoute
+  '/assessment': typeof AssessmentRoute
+  '/processing': typeof ProcessingRoute
+  '/results': typeof ResultsRoute
+  '/setup': typeof SetupRoute
+  '/tasks': typeof TasksRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/architecture': typeof ArchitectureRoute
+  '/assessment': typeof AssessmentRoute
+  '/processing': typeof ProcessingRoute
+  '/results': typeof ResultsRoute
+  '/setup': typeof SetupRoute
+  '/tasks': typeof TasksRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/architecture': typeof ArchitectureRoute
+  '/assessment': typeof AssessmentRoute
+  '/processing': typeof ProcessingRoute
+  '/results': typeof ResultsRoute
+  '/setup': typeof SetupRoute
+  '/tasks': typeof TasksRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/architecture'
+    | '/assessment'
+    | '/processing'
+    | '/results'
+    | '/setup'
+    | '/tasks'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/architecture'
+    | '/assessment'
+    | '/processing'
+    | '/results'
+    | '/setup'
+    | '/tasks'
+  id:
+    | '__root__'
+    | '/'
+    | '/architecture'
+    | '/assessment'
+    | '/processing'
+    | '/results'
+    | '/setup'
+    | '/tasks'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ArchitectureRoute: typeof ArchitectureRoute
+  AssessmentRoute: typeof AssessmentRoute
+  ProcessingRoute: typeof ProcessingRoute
+  ResultsRoute: typeof ResultsRoute
+  SetupRoute: typeof SetupRoute
+  TasksRoute: typeof TasksRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,22 +130,60 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/architecture': {
+      id: '/architecture'
+      path: '/architecture'
+      fullPath: '/architecture'
+      preLoaderRoute: typeof ArchitectureRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/assessment': {
+      id: '/assessment'
+      path: '/assessment'
+      fullPath: '/assessment'
+      preLoaderRoute: typeof AssessmentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/processing': {
+      id: '/processing'
+      path: '/processing'
+      fullPath: '/processing'
+      preLoaderRoute: typeof ProcessingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/results': {
+      id: '/results'
+      path: '/results'
+      fullPath: '/results'
+      preLoaderRoute: typeof ResultsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/setup': {
+      id: '/setup'
+      path: '/setup'
+      fullPath: '/setup'
+      preLoaderRoute: typeof SetupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tasks': {
+      id: '/tasks'
+      path: '/tasks'
+      fullPath: '/tasks'
+      preLoaderRoute: typeof TasksRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ArchitectureRoute: ArchitectureRoute,
+  AssessmentRoute: AssessmentRoute,
+  ProcessingRoute: ProcessingRoute,
+  ResultsRoute: ResultsRoute,
+  SetupRoute: SetupRoute,
+  TasksRoute: TasksRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
