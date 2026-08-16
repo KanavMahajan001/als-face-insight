@@ -1,13 +1,31 @@
 /**
  * Frontend-only session store.
  *
- * Holds the demo session state (selected task, recording metadata, mock
- * result). Replace `runAnalysis()` with a fetch to a Python/PyTorch service
- * when a real backend is added — nothing else in the UI needs to change.
+ * Holds the demo session state (selected task, recording metadata, captured
+ * landmark/speech features). Everything stays in this browser tab — no
+ * backend, no upload. A Python/PyTorch service can later consume the exact
+ * same `(20, 68, 2)` tensor plus the speech summary.
  */
 import { useSyncExternalStore } from "react";
 import type { Landmarks68 } from "./landmarks";
 import type { DemoResult } from "./mock-results";
+
+export type SpeechSummary = {
+  ddkRateHz: number;
+  peakCount: number;
+  rhythmVariability: number | null;
+  meanPitchHz: number | null;
+  speechFrameCount: number;
+};
+
+export type TaskCapture = {
+  taskId: string;
+  landmarkFrameCount: number;
+  sequence: Landmarks68[]; // (20, 68, 2)
+  speech: SpeechSummary | null;
+  durationMs: number;
+  capturedAt: number;
+};
 
 export type SessionState = {
   taskId: string | null;
@@ -15,6 +33,7 @@ export type SessionState = {
   recordingUrl: string | null;
   hasRecording: boolean;
   sequence: Landmarks68[]; // (20, 68, 2)
+  captures: Record<string, TaskCapture>;
   result: DemoResult | null;
 };
 
@@ -24,6 +43,7 @@ const initial: SessionState = {
   recordingUrl: null,
   hasRecording: false,
   sequence: [],
+  captures: {},
   result: null,
 };
 
@@ -36,6 +56,11 @@ function emit() {
 
 export function setSession(patch: Partial<SessionState>) {
   state = { ...state, ...patch };
+  emit();
+}
+
+export function saveCapture(capture: TaskCapture) {
+  state = { ...state, captures: { ...state.captures, [capture.taskId]: capture } };
   emit();
 }
 
