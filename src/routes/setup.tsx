@@ -1,12 +1,13 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Camera, Mic, ScanFace, Crosshair, Sun, Check, X, ArrowRight, Play, Pause, Route as RouteIcon } from "lucide-react";
 import { CameraView } from "@/components/als/CameraView";
 import { LandmarkCanvas } from "@/components/als/LandmarkCanvas";
 import { AudioWaveform } from "@/components/als/AudioWaveform";
 import { useMediaStream } from "@/hooks/useMediaStream";
-import { boundingBox, normalizeBoundingBox, type Landmarks68 } from "@/lib/als/landmarks";
-import type { LandmarkEngine } from "@/hooks/useFaceLandmarks";
+import { useFaceLandmarks } from "@/hooks/useFaceLandmarks";
+import { useSpeechFeatures } from "@/hooks/useSpeechFeatures";
+import type { Landmarks68 } from "@/lib/als/landmarks";
 
 export const Route = createFileRoute("/setup")({
   head: () => ({
@@ -50,32 +51,72 @@ function StatusRow({ icon: Icon, label, status }: { icon: typeof Camera; label: 
 
 function SetupPage() {
   const { stream, camera, mic, error, enableCamera, enableMic } = useMediaStream();
-  const [detected, setDetected] = useState(false);
-  const [engine, setEngine] = useState<LandmarkEngine>("loading");
-  const [landmarks, setLandmarks] = useState<Landmarks68 | null>(null);
+  const face = useFaceLandmarks();
+  const speech = useSpeechFeatures();
   const [paused, setPaused] = useState(false);
   const [trajectory, setTrajectory] = useState(false);
+  const videoElRef = useRef<HTMLVideoElement | null>(null);
 
-  const onStatus = useCallback(
-    (s: { detected: boolean; engine: LandmarkEngine; landmarks: Landmarks68 | null }) => {
-      setDetected(s.detected);
-      setEngine(s.engine);
-      if (s.landmarks) setLandmarks(s.landmarks);
-    },
-    [],
-  );
+  const onVideoReady = useCallback((el: HTMLVideoElement | null) => {
+    videoElRef.current = el;
+  }, []);
+
+  const hasVideo = !!stream?.getVideoTracks().length;
+
+  // Live landmark tracking whenever the camera is on, the models are ready and
+  // the preview is not paused.
+  useEffect(() => {
+    const el = videoElRef.current;
+    if (!face.isReady || !hasVideo || paused || !el) return;
+    face.start(el);
+    return () => face.stop();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [face.isReady, face.start, face.stop, hasVideo, paused]);
+
+  // Keep the accumulated preview buffer bounded on this always-on screen.
+  useEffect(() => {
+    if (face.frames.length > 300) face.reset();
+  }, [face.frames.length, face]);
+
+  const latest = face.frames.length ? face.frames[face.frames.length - 1]! : null;
+  const detected = !!latest && !paused;
 
   const { centered, size } = useMemo(() => {
-    if (!landmarks || !detected) return { centered: false, size: 0 };
-    const bb = boundingBox(landmarks);
-    const cx = bb.x + bb.w / 2;
-    const cy = bb.y + bb.h / 2;
-    return { centered: Math.abs(cx - 0.5) < 0.16 && Math.abs(cy - 0.5) < 0.2 && bb.w > 0.12, size: bb.w };
-  }, [landmarks, detected]);
+    const v = videoElRef.current;
+    if (!latest || !detected || !v?.videoWidth) return { centered: false, size: 0 };
+    const [xmin, ymin, xmax, ymax] = latest.bbox;
+    const w = (xmax - xmin) / v.videoWidth;
+    const h = (ymax - ymin) / v.videoHeight;
+    const cx = (xmin / v.videoWidth) + w / 2;
+    const cy = (ymin / v.videoHeight) + h / 2;
+    return { centered: Math.abs(cx - 0.5) < 0.16 && Math.abs(cy - 0.5) < 0.2 && w > 0.12, size: h };
+  }, [latest, detected]);
 
   const lightingOk = detected && size > 0.1;
-  const normalized = landmarks ? normalizeBoundingBox(landmarks) : null;
+  const normalized: Landmarks68 | null = latest
+    ? latest.normalisedLandmarks.map(([x, y]) => ({ x, y }))
+    : null;
   const canContinue = camera === "granted" && mic === "granted";
+
+  const micLive = speech.isRecording && speech.frames.length > 0;
+
+  // Real microphone feature extraction, tied to the mic permission.
+  useEffect(() => {
+    if (mic === "granted" && !speech.isRecording) void speech.start();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mic]);
+
+  useEffect(() => {
+    if (speech.frames.length > 400) speech.reset();
+  }, [speech.frames.length, speech]);
+
+  const modelStatus = face.isModelLoading
+    ? "Loading model…"
+    : face.isReady
+      ? detected
+        ? "face-api.js · live"
+        : "face-api.js · ready"
+      : "Model unavailable";
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
@@ -89,7 +130,14 @@ function SetupPage() {
 
       <div className="grid gap-6 lg:grid-cols-[1.35fr_1fr]">
         <div className="surface-card p-4">
-          <CameraView stream={stream} paused={paused} trajectory={trajectory} onStatus={onStatus} overlayLabel="68-pt overlay" />
+          <CameraView
+            stream={stream}
+            frame={paused ? null : latest}
+            trajectory={trajectory}
+            statusLabel={modelStatus}
+            overlayLabel="68-pt overlay"
+            onVideoReady={onVideoReady}
+          />
           <div className="mt-4 flex flex-wrap gap-2">
             <button
               onClick={() => setPaused(false)}
@@ -116,8 +164,13 @@ function SetupPage() {
           <h2 className="text-base font-semibold">System Check</h2>
           <ul className="mt-4 space-y-2.5">
             <StatusRow icon={Camera} label="Camera" status={{ ok: camera === "granted", good: "Connected", bad: "Not detected" }} />
-            <StatusRow icon={Mic} label="Microphone" status={{ ok: mic === "granted", good: "Connected", bad: "Not detected" }} />
-            <StatusRow icon={ScanFace} label="Face" status={{ ok: detected, good: "Detected", bad: "Not detected" }} />
+            <StatusRow icon={Mic} label="Microphone" status={{ ok: micLive || mic === "granted", good: micLive ? "Capturing audio" : "Connected", bad: "Not detected" }} />
+            <StatusRow
+              icon={ScanFace}
+              label="Landmark model"
+              status={{ ok: face.isReady, good: "Loaded", bad: face.isModelLoading ? "Loading…" : "Unavailable" }}
+            />
+            <StatusRow icon={ScanFace} label="Face" status={{ ok: detected, good: `Detected · ${face.frames.length} frames`, bad: "Not detected" }} />
             <StatusRow
               icon={Crosshair}
               label="Face Position"
@@ -131,17 +184,23 @@ function SetupPage() {
             <div className="mt-2">
               <AudioWaveform stream={stream} height={72} />
             </div>
+            <p className="mt-2 font-mono text-xs text-muted-foreground">
+              RMS {(speech.frames[speech.frames.length - 1]?.rms ?? 0).toFixed(3)} · pitch{" "}
+              {speech.frames[speech.frames.length - 1]?.pitchHz
+                ? `${Math.round(speech.frames[speech.frames.length - 1]!.pitchHz!)} Hz`
+                : "—"}
+            </p>
           </div>
 
-          {error && (
+          {(error || face.error || speech.error) && (
             <p className="mt-4 rounded-lg border border-destructive/40 bg-destructive/8 px-3 py-2 text-sm text-destructive">
-              {error}
+              {error ?? face.error ?? speech.error}
             </p>
           )}
-          {engine === "simulated" && (
+          {!face.isModelLoading && !face.isReady && (
             <p className="mt-4 rounded-lg border bg-surface px-3 py-2 text-xs text-muted-foreground">
-              The in-browser face mesh model could not be loaded, so the landmark overlay falls back to a clearly
-              labelled simulated stream. Camera and microphone still work normally.
+              The face-api.js landmark model could not be loaded from the CDN, so no landmarks can be extracted. Camera
+              and microphone still work normally.
             </p>
           )}
 
@@ -180,8 +239,8 @@ function SetupPage() {
           <p className="mono-label">Step 2 · Visualisation layer</p>
           <h2 className="mt-1 text-xl font-semibold tracking-tight">Live Facial Landmark View</h2>
           <p className="mt-2 text-sm text-muted-foreground">
-            Normalised landmark set rendered independently of the video frame. This is a visualisation layer only — no
-            detection or classification of any condition happens in the browser.
+            Bounding-box normalised landmark set rendered independently of the video frame. This is an extraction and
+            visualisation layer only — no detection or classification of any condition happens in the browser.
           </p>
           <div className="mt-4 aspect-square w-full max-w-md rounded-xl border bg-surface">
             <LandmarkCanvas
